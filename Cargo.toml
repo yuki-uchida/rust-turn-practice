@@ -1,0 +1,21 @@
+[package]
+name = "turn"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.41"
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1.51"
+log = "0.4"
+env_logger = "0.8"
+thiserror = "1.0.25"
+stun = {path = "/Users/yuki_uchida/web_research/webrtc_research/ucchy-webrtc/stun" }
+[[example]]
+name = "client"
+path = "examples/turn_client.rs"
+[[example]]
+name = "server"
+path = "examples/turn_server.rs"
