@@ -12,6 +12,8 @@ async-trait = "0.1.51"
 log = "0.4"
 env_logger = "0.8"
 thiserror = "1.0.25"
+md-5 = "0.10.1"
+rand = "0.8.5"
 stun = {path = "/Users/yuki_uchida/web_research/webrtc_research/ucchy-webrtc/stun" }
 [[example]]
 name = "client"
