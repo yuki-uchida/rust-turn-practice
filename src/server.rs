@@ -50,8 +50,8 @@ impl Server {
                 }
             };
             println!("{:?}", &buf[..n]);
-            let mut request = Request::new(buf[..n].to_vec(), addr).expect("Cant decode packet");
-            println!("{:?}", request);
+            let mut request = Request::new(Arc::clone(&conn), buf[..n].to_vec(), addr)
+                .expect("Cant decode packet");
             if let Err(err) = request.handle_request().await {
                 log::error!("error when handling datagram: {}", err);
             }

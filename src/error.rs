@@ -1,3 +1,4 @@
+use crate::util;
 use thiserror::Error;
 pub type Result<T> = std::result::Result<T, Error>;
 use std::time::SystemTimeError;
@@ -12,6 +13,10 @@ pub enum Error {
     ErrReceiverClosed,
     #[error("turn: duplicated NONCE generated, discarding request")]
     ErrDuplicatedNonce,
+    #[error("{0}")]
+    Stun(#[from] stun::error::Error),
+    #[error("{0}")]
+    ConnError(#[from] util::Error),
     #[error("{0}")]
     Other(String),
 }

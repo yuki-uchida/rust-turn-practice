@@ -1,20 +1,20 @@
 use crate::error::*;
-use crate::server::INBOUND_MTU;
+use crate::util::Conn;
 use md5::{Digest, Md5};
 use std::collections::HashMap;
-use std::fmt::format;
+use std::fmt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::SystemTime;
-use stun::attribute::{Nonce, ATTR_MESSAGE_INTEGRITY, ATTR_NONCE, ATTR_REALM};
-
+use stun::attribute::{Nonce, Realm, ATTR_MESSAGE_INTEGRITY, ATTR_NONCE, ATTR_REALM};
 use stun::error_code::*;
 use stun::integrity::*;
 use stun::message::*;
 use tokio::sync::Mutex;
 use tokio::time::Instant;
-#[derive(Debug)]
+
 pub struct Request {
+    conn: Arc<dyn Conn + Send + Sync>,
     packet: Vec<u8>,
     src_address: SocketAddr,
     kind: RequestType,
@@ -23,9 +23,14 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(packet: Vec<u8>, addr: SocketAddr) -> Result<Self> {
+    pub fn new(
+        conn: Arc<dyn Conn + Send + Sync>,
+        packet: Vec<u8>,
+        addr: SocketAddr,
+    ) -> Result<Self> {
         let request = if Request::is_channel_data(packet.to_vec()) {
             Request {
+                conn: conn,
                 packet: packet.to_vec(),
                 src_address: addr,
                 kind: CHANNEL_DATA,
@@ -34,6 +39,7 @@ impl Request {
             }
         } else {
             Request {
+                conn: conn,
                 packet: packet.to_vec(),
                 src_address: addr,
                 kind: STUN_PACKET,
@@ -98,7 +104,6 @@ impl Request {
     }
 
     pub async fn handle_allocate_request(&mut self, message: &Message) -> Result<()> {
-        println!("handling allocate request => {:?}", self);
         println!("handling allocate message => {:?}", message);
 
         // 1.message_integrityの取得
@@ -134,10 +139,26 @@ impl Request {
         // 返信する時のSTUN Message Method と Class
         let mut response_message = Message::new(METHOD_ALLOCATE, CLASS_ERROR);
         response_message.transaction_id = transaction_id;
+        // ErrorCodeを入れる
+        response_message.set_extra_attribute(Box::new(ErrorCodeAttribute {
+            code: CODE_UNAUTHORIZED,
+            reason: b"Unauthorized".to_vec(),
+        }))?;
+        println!(
+            "adding ErrorCode to response_mesasge: {:?}",
+            response_message
+        );
         // nonce, realmを入れる
-        response_message.set_extra_attribute(Box::new(Nonce::new(ATTR_NONCE, nonce)));
-        response_message.set_extra_attribute(Box::new(Realm::new(ATTR_REALM, self.realm.clone())));
+        response_message.set_extra_attribute(Box::new(Nonce::new(ATTR_NONCE, nonce)))?;
+        println!("adding nonce to response_mesasge: {:?}", response_message);
+        response_message
+            .set_extra_attribute(Box::new(Realm::new(ATTR_REALM, self.realm.clone())))?;
+        println!("adding realm to response_mesasge: {:?}", response_message);
+        let response_message_packet = response_message.encode_to_packet();
         // メッセージの送信
+        self.conn
+            .send_to(&response_message_packet, self.src_address)
+            .await?;
         return Ok(());
     }
 }

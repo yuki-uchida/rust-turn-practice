@@ -1,7 +1,6 @@
-use anyhow::Result;
 use stun::attribute::*;
+use stun::error::*;
 use stun::message::*;
-
 // 特定のプロトコルを使用するためにクライアントから送信される
 pub struct RequestedTransport {
     pub protocol: Protocol,
